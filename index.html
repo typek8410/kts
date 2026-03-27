@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>일본 여행 맛집·호텔 검색</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ===== 상단 헤더 ===== -->
+  <header class="header">
+    <div class="header-title">
+      <span class="logo">🗾</span>
+      <h1>일본 여행 검색</h1>
+    </div>
+    <div class="controls">
+      <!-- 지도 언어 선택 -->
+      <div class="control-group">
+        <label for="map-lang-select">지도 언어</label>
+        <select id="map-lang-select">
+          <option value="ja" selected>일본어</option>
+          <option value="ko">한국어</option>
+        </select>
+      </div>
+
+      <!-- 도시 선택 -->
+      <div class="control-group">
+        <label for="city-select">도시</label>
+        <select id="city-select">
+          <option value="">도시 선택</option>
+          <optgroup label="주요 대도시">
+            <option value="tokyo">도쿄</option>
+            <option value="osaka">오사카</option>
+            <option value="fukuoka">후쿠오카</option>
+            <option value="sapporo">삿포로</option>
+            <option value="kyoto">교토</option>
+          </optgroup>
+          <optgroup label="30만 이상 소도시">
+            <option value="kawasaki">가와사키</option>
+            <option value="saitama">사이타마</option>
+            <option value="hiroshima">히로시마</option>
+            <option value="sendai">센다이</option>
+            <option value="kitakyushu">기타큐슈</option>
+            <option value="chiba">지바</option>
+            <option value="sakai">사카이</option>
+            <option value="niigata">니가타</option>
+            <option value="hamamatsu">하마마쓰</option>
+            <option value="kumamoto">구마모토</option>
+            <option value="shizuoka">시즈오카</option>
+            <option value="okayama">오카야마</option>
+            <option value="kagoshima">가고시마</option>
+            <option value="funabashi">후나바시</option>
+            <option value="higashiosaka">히가시오사카</option>
+            <option value="himeji">히메지</option>
+            <option value="utsunomiya">우츠노미야</option>
+            <option value="matsuyama">마쓰야마</option>
+            <option value="matsudo">마쓰도</option>
+            <option value="nagasaki">나가사키</option>
+            <option value="nagano">나가노</option>
+            <option value="gifu">기후</option>
+            <option value="hirakata">히라카타</option>
+            <option value="yokosuka">요코스카</option>
+            <option value="kurashiki">구라시키</option>
+            <option value="ichikawa">이치카와</option>
+            <option value="amagasaki">아마가사키</option>
+            <option value="nara">나라</option>
+            <option value="toyama">도야마</option>
+            <option value="wakayama">와카야마</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <!-- 카테고리 선택 -->
+      <div class="control-group">
+        <label for="category-select">카테고리</label>
+        <select id="category-select">
+          <option value="">카테고리 선택</option>
+          <optgroup label="음식">
+            <option value="ramen">라멘</option>
+            <option value="sushi">스시</option>
+            <option value="tonkatsu">돈카츠/규카츠</option>
+            <option value="izakaya">이자카야</option>
+            <option value="cafe">카페</option>
+            <option value="yakitori">야키토리</option>
+            <option value="tempura">텐푸라</option>
+            <option value="yakiniku">야키니쿠</option>
+          </optgroup>
+          <optgroup label="숙소">
+            <option value="hotel">호텔</option>
+            <option value="guesthouse">게스트하우스</option>
+            <option value="ryokan">료칸</option>
+          </optgroup>
+          <optgroup label="명소">
+            <option value="shrine">신사</option>
+            <option value="temple">절</option>
+            <option value="park">공원</option>
+            <option value="shopping">쇼핑</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <!-- 평점 필터 -->
+      <div class="control-group">
+        <label>평점</label>
+        <div class="rating-buttons">
+          <button class="rating-btn active" data-rating="all">전체</button>
+          <button class="rating-btn" data-rating="3">3+</button>
+          <button class="rating-btn" data-rating="3-4">3~4</button>
+          <button class="rating-btn" data-rating="4-5">4~5</button>
+        </div>
+      </div>
+
+      <!-- 검색 버튼 -->
+      <button id="search-btn" class="search-btn" disabled>검색</button>
+    </div>
+  </header>
+
+  <!-- ===== 메인 콘텐츠 ===== -->
+  <main class="main-content">
+
+    <!-- 지도 영역 -->
+    <div class="map-section">
+      <div id="map"></div>
+      <button id="research-btn" class="research-btn hidden">
+        🔍 현재 지도에서 재검색
+      </button>
+    </div>
+
+    <!-- 결과 리스트 영역 -->
+    <aside class="result-section">
+      <div class="result-header">
+        <h2>검색 결과</h2>
+        <span id="result-count" class="result-count"></span>
+      </div>
+      <div id="result-list" class="result-list">
+        <div class="empty-state">
+          <span class="empty-icon">🔍</span>
+          <p>도시와 카테고리를 선택한 후<br/>검색 버튼을 눌러주세요.</p>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- 로딩 오버레이 -->
+  <div id="loading-overlay" class="loading-overlay hidden">
+    <div class="spinner"></div>
+    <p>검색 중...</p>
+  </div>
+
+  <!-- Google Maps JavaScript API (API 키를 아래에 입력하세요) -->
+  <!-- 지도 언어 선택에 따라 동적으로 Google Maps API를 로드합니다. -->
+  <script src="main.js"></script>
+  <script>
+    // 동적으로 Google Maps API 스크립트 삽입
+    function loadGoogleMaps(lang) {
+      // 기존 스크립트 제거
+      const old = document.getElementById('gmap-script');
+      if (old) old.remove();
+      window.google = undefined;
+      // 새 스크립트 추가
+      const script = document.createElement('script');
+      script.id = 'gmap-script';
+      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyABOZF8_2I-F9bVpeb32ibFIlurcgIPfEs&libraries=places,geometry&language=${lang}&callback=initMap`;
+      script.async = true;
+      script.defer = true;
+      document.body.appendChild(script);
+    }
+    // 초기 로드(일본어)
+    loadGoogleMaps('ja');
+    // 언어 선택 이벤트
+    window.addEventListener('DOMContentLoaded', function() {
+      const sel = document.getElementById('map-lang-select');
+      if (sel) {
+        sel.addEventListener('change', function() {
+          loadGoogleMaps(sel.value);
+        });
+      }
+    });
+  </script>
+</body>
+</html>
