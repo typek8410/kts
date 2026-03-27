@@ -661,7 +661,7 @@ function copyToClipboard(text) {
 
 function getGoogleMapsPlaceUrl(place) {
   if (place.place_id) {
-    return `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(place.place_id)}`;
+    return `https://www.google.com/maps/search/?api=1&query=place_id:${place.place_id}`;
   }
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name || "")}`;
 }
