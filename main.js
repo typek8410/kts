@@ -326,8 +326,14 @@ function searchPlacesByCenter(center, radius) {
       enAddress: enMap[p.place_id] ? enMap[p.place_id].address : "",
     }));
 
-    currentResults = merged;
-    renderFilteredResults(merged);
+    // 현재 지도 화면 내 장소만 표시
+    const bounds = map.getBounds();
+    const inBounds = bounds
+      ? merged.filter((p) => p.geometry && p.geometry.location && bounds.contains(p.geometry.location))
+      : merged;
+
+    currentResults = inBounds;
+    renderFilteredResults(inBounds);
   }
 
   placesService.textSearch({ ...baseReq, language: "ja" }, (results, status) => {
