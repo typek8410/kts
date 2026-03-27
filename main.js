@@ -272,7 +272,8 @@ function searchPlacesByCenter(center, radius) {
 
   let jaResults = null;
   const koMap = {};
-  let pendingCount = 2;
+  const enMap = {};
+  let pendingCount = 3;
 
   function tryFinalize() {
     pendingCount--;
@@ -295,6 +296,8 @@ function searchPlacesByCenter(center, radius) {
         ? koMap[p.place_id].name
         : "",
       koAddress: koMap[p.place_id] ? koMap[p.place_id].address : "",
+      enName: enMap[p.place_id] ? enMap[p.place_id].name : "",
+      enAddress: enMap[p.place_id] ? enMap[p.place_id].address : "",
     }));
 
     currentResults = merged;
@@ -317,6 +320,18 @@ function searchPlacesByCenter(center, radius) {
       results.forEach((p) => {
         koMap[p.place_id] = {
           name: p.name,
+          address: p.formatted_address || p.vicinity || "",
+        };
+      });
+    }
+    tryFinalize();
+  });
+
+  placesService.textSearch({ ...baseReq, language: "en" }, (results, status) => {
+    if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+      results.forEach((p) => {
+        enMap[p.place_id] = {
+          name: p.name || "",
           address: p.formatted_address || p.vicinity || "",
         };
       });
@@ -390,15 +405,30 @@ function openInfoWindow(marker, place, index) {
     : "평점 없음";
 
   const address = place.formatted_address || place.vicinity || "주소 정보 없음";
-
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}&query_place_id=${place.place_id}`;
-
+  const mapsUrl = getGoogleMapsPlaceUrl(place);
   const koNameHtml = place.koName
     ? `<div class="info-window-name-ko">${escapeHtml(place.koName)}</div>`
     : "";
   const koAddressHtml = place.koAddress
     ? `<div class="info-window-address-ko">${escapeHtml(place.koAddress)}</div>`
     : "";
+
+  // Visit Japan Web용 정보 패널 (숙소 카테고리만)
+  let vjwPanel = "";
+  const isStayCategory = ["hotel", "guesthouse", "ryokan"].includes(selectedCategory);
+  if (isStayCategory) {
+    const vjw = buildVisitJapanData(place);
+    vjwPanel = `
+      <div class="vjw-panel" style="margin-top:10px;padding:10px 8px;background:#f8f9fa;border-radius:8px;border:1px solid #dee2e6;">
+        <div style="font-weight:700;font-size:13px;margin-bottom:4px;">Visit Japan Web용 복사 텍스트</div>
+        <textarea class="vjw-copy-text" style="width:100%;font-size:12px;line-height:1.5;padding:6px;resize:none;" rows="6" readonly>${vjw.fullText}</textarea>
+        <button onclick="copyToClipboard(this.previousElementSibling.value)" style="margin-top:6px;padding:4px 12px;font-size:12px;border-radius:6px;border:1px solid #e63946;background:#fff;color:#e63946;cursor:pointer;">복사</button>
+        <div style="margin-top:8px;font-size:11px;color:#888;">Visit Japan Web에 붙여넣기 하세요.</div>
+      </div>
+    `;
+  }
+
+  const saveGuideHtml = buildGoogleMapsSaveGuideHtml(mapsUrl, true);
 
   const content = `
     <div class="info-window">
@@ -407,9 +437,11 @@ function openInfoWindow(marker, place, index) {
       <div class="info-window-rating">${rating}</div>
       <div class="info-window-address">${escapeHtml(address)}</div>
       ${koAddressHtml}
-      <a class="info-window-link" href="${mapsUrl}" target="_blank" rel="noopener noreferrer">
-        Google 지도에서 보기 →
+      <a class="info-window-link info-window-open-btn" href="${mapsUrl}" target="_blank" rel="noopener noreferrer">
+        Google Maps에서 열기
       </a>
+      ${vjwPanel}
+      ${saveGuideHtml}
     </div>
   `;
 
@@ -434,13 +466,15 @@ function renderResultList(places) {
   // 리뷰수 내림차순 정렬
   const sorted = [...places].sort((a, b) => (b.user_ratings_total || 0) - (a.user_ratings_total || 0));
 
+  const isStayCategory = ["hotel", "guesthouse", "ryokan"].includes(selectedCategory);
+
   list.innerHTML = sorted
     .map((place, index) => {
       const rating = place.rating
         ? `⭐ ${place.rating.toFixed(1)}${place.user_ratings_total ? ` <span class="result-item-reviews">(${place.user_ratings_total.toLocaleString()} 리뷰)</span>` : ""}`
         : "평점 없음";
       const address = place.formatted_address || place.vicinity || "";
-      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}&query_place_id=${place.place_id}`;
+      const mapsUrl = getGoogleMapsPlaceUrl(place);
 
       const koNameHtml = place.koName
         ? `<span class="result-item-name-ko">${escapeHtml(place.koName)}</span>`
@@ -448,6 +482,16 @@ function renderResultList(places) {
       const koAddressHtml = place.koAddress
         ? `<div class="result-item-address-ko">${escapeHtml(place.koAddress)}</div>`
         : "";
+
+      const vjw = buildVisitJapanData(place);
+      const vjwHtml = isStayCategory
+        ? `<div class="vjw-inline">
+            <div class="vjw-inline-title">Visit Japan Web 숙소 정보</div>
+            <textarea class="vjw-inline-text" rows="4" readonly>${vjw.shortText}</textarea>
+            <button class="vjw-inline-btn" data-copy-text="${escapeHtml(vjw.fullText)}">복사</button>
+          </div>`
+        : "";
+      const saveGuideHtml = buildGoogleMapsSaveGuideHtml(mapsUrl, false);
 
       return `
         <div class="result-item" data-index="${places.indexOf(place)}" role="button" tabindex="0">
@@ -461,9 +505,8 @@ function renderResultList(places) {
           </div>
           ${address ? `<div class="result-item-address">${escapeHtml(address)}</div>` : ""}
           ${koAddressHtml}
-          <a class="result-item-link" href="${mapsUrl}" target="_blank" rel="noopener noreferrer">
-            Google 지도에서 보기 →
-          </a>
+          ${vjwHtml}
+          ${saveGuideHtml}
         </div>
       `;
     })
@@ -472,6 +515,11 @@ function renderResultList(places) {
   // 리스트 클릭 이벤트
   list.querySelectorAll(".result-item").forEach((item) => {
     item.addEventListener("click", (e) => {
+      if (e.target.classList.contains("vjw-inline-btn")) {
+        const text = decodeHtml(e.target.getAttribute("data-copy-text") || "");
+        copyToClipboard(text);
+        return;
+      }
       // 링크 클릭은 지도 이동 방지
       if (e.target.tagName === "A") return;
 
@@ -560,6 +608,94 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function decodeHtml(str) {
+  const txt = document.createElement("textarea");
+  txt.innerHTML = str;
+  return txt.value;
+}
+
+function copyToClipboard(text) {
+  if (!text) return;
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text);
+    return;
+  }
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.left = "-9999px";
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  document.execCommand("copy");
+  ta.remove();
+}
+
+function getGoogleMapsPlaceUrl(place) {
+  if (place.place_id) {
+    return `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(place.place_id)}`;
+  }
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name || "")}`;
+}
+
+function buildGoogleMapsSaveGuideHtml(mapsUrl, compact) {
+  const compactClass = compact ? " save-guide-compact" : "";
+  return `
+    <div class="save-guide${compactClass}">
+      <a class="save-guide-open" href="${mapsUrl}" target="_blank" rel="noopener noreferrer">Google Maps에서 열기</a>
+      <div class="save-guide-section">
+        <div class="save-guide-title">Google 지도에 저장</div>
+        <p class="save-guide-text">열린 화면에서 저장 버튼을 눌러 즐겨찾기나 가고 싶은 곳 목록에 추가하세요.</p>
+      </div>
+      <div class="save-guide-section">
+        <div class="save-guide-title">나의 지도(My Maps)에 넣기</div>
+        <p class="save-guide-text">PC에서는 나의 장소 → 지도에서 원하는 My Maps를 연 뒤 이 장소를 직접 추가해 주세요.</p>
+      </div>
+    </div>
+  `;
+}
+
+function buildVisitJapanData(place) {
+  // 숙소 주소는 Visit Japan Web 복붙을 위해 영어 주소를 우선 사용
+  const rawAddress = (place.enAddress || place.formatted_address || place.vicinity || "").replace(/,/g, " ").trim();
+  const postalMatch = rawAddress.match(/(\d{3})[- ]?(\d{4})/);
+  const postal = postalMatch ? `${postalMatch[1]}${postalMatch[2]}` : "";
+
+  const upperAddress = rawAddress.toUpperCase();
+  const compactAddress = upperAddress
+    .replace(/JAPAN/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // 간단 규칙: 앞 2토큰을 PREFECTURE/CITY로 분리하고 나머지를 ADDRESS로 사용
+  const tokens = compactAddress.split(" ").filter(Boolean);
+  const prefecture = tokens[0] || "";
+  const city = tokens[1] || "";
+  const address = tokens.slice(2).join(" ");
+
+  let phone = (place.formatted_phone_number || place.international_phone_number || "").replace(/\D/g, "");
+  if (phone.startsWith("81")) phone = `00${phone}`;
+
+  const hotelName = (place.enName || place.name || "").toUpperCase();
+
+  const fullText = [
+    `HOTEL NAME: ${hotelName}`,
+    `POSTAL CODE: ${postal}`,
+    `PREFECTURE: ${prefecture}`,
+    `CITY: ${city}`,
+    `ADDRESS: ${address}`,
+    `PHONE: ${phone}`,
+  ].join("\n");
+
+  const shortText = [
+    `${postal} ${prefecture} ${city} ${address}`.trim(),
+    `${hotelName}`,
+    `TEL: ${phone}`,
+  ].join("\n");
+
+  return { fullText, shortText };
 }
 
 // ===========================
