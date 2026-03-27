@@ -1,0 +1,10 @@
+Maps JavaScript API
+
+AIzaSyABOZF8_2I-F9bVpeb32ibFIlurcgIPfEs
+
+Places API
+
+AIzaSyABOZF8_2I-F9bVpeb32ibFIlurcgIPfEs
+
+
+https://github.com/typek8410/travelToJapan.git
