@@ -204,18 +204,24 @@ function bindEvents() {
   const searchBtn = document.getElementById("search-btn");
   const ratingBtns = document.querySelectorAll(".rating-btn");
 
-  citySelect.addEventListener("change", (e) => {
+  const handleCitySelection = (e) => {
     selectedCity = e.target.value;
     updateSearchBtn();
 
-    if (selectedCity) {
-      const city = CITIES[selectedCity];
-      map.setCenter({ lat: city.lat, lng: city.lng });
-      map.setZoom(city.zoom);
-      clearMarkers();
-      clearResultList();
-    }
-  });
+    if (!selectedCity) return;
+
+    const city = CITIES[selectedCity];
+    if (!city || !map) return;
+
+    map.panTo({ lat: city.lat, lng: city.lng });
+    map.setZoom(city.zoom);
+    showResearchBtn(false);
+    clearMarkers();
+    clearResultList();
+  };
+
+  citySelect.addEventListener("change", handleCitySelection);
+  citySelect.addEventListener("input", handleCitySelection);
 
   categorySelect.addEventListener("change", (e) => {
     selectedCategory = e.target.value;
