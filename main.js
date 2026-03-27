@@ -380,9 +380,12 @@ function renderFilteredResults(results) {
     filtered = results.filter((p) => p.rating >= 4);
   }
 
+  // 리뷰수 내림차순 정렬 (마커 번호와 리스트 번호 일치)
+  const sorted = [...filtered].sort((a, b) => (b.user_ratings_total || 0) - (a.user_ratings_total || 0));
+
   clearMarkers();
-  renderMarkers(filtered);
-  renderResultList(filtered);
+  renderMarkers(sorted);
+  renderResultList(sorted);
 }
 
 // ===========================
@@ -489,12 +492,9 @@ function renderResultList(places) {
     return;
   }
 
-  // 리뷰수 내림차순 정렬
-  const sorted = [...places].sort((a, b) => (b.user_ratings_total || 0) - (a.user_ratings_total || 0));
-
   const isStayCategory = ["hotel", "guesthouse", "ryokan"].includes(selectedCategory);
 
-  list.innerHTML = sorted
+  list.innerHTML = places
     .map((place, index) => {
       const rating = place.rating
         ? `⭐ ${place.rating.toFixed(1)}${place.user_ratings_total ? ` <span class="result-item-reviews">(${place.user_ratings_total.toLocaleString()} 리뷰)</span>` : ""}`
@@ -520,7 +520,7 @@ function renderResultList(places) {
       const saveGuideHtml = buildGoogleMapsSaveGuideHtml(mapsUrl, false);
 
       return `
-        <div class="result-item" data-index="${places.indexOf(place)}" role="button" tabindex="0">
+        <div class="result-item" data-index="${index}" role="button" tabindex="0">
           <div class="result-item-header">
             <span class="result-item-index">${index + 1}</span>
             <div class="result-item-names">
